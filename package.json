@@ -21,7 +21,7 @@
     "netlify-lambda": "^2.0.16",
     "nodemailer": "^6.9.15",
     "puppeteer": "^23.6.0",
-    "puppeteer-core": "^23.6.0",
+    "puppeteer-core": "^10.4.0",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
     "serverless-http": "^3.2.0"
