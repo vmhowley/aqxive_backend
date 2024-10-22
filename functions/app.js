@@ -1,14 +1,13 @@
 const serverless = require("serverless-http");
 const express = require('express');
-const puppeteer = require('puppeteer-core');
-const chromium = require('chrome-aws-lambda');
+const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
 const { google } = require("googleapis");
 const OAuth2 = google.auth.OAuth2;
 // Inicializar Puppeteer con Stealth Plugin
-// puppeteer.use(StealthPlugin());
+puppeteer.use(StealthPlugin());
 
 const app = express();
 const router = express.Router();
@@ -28,13 +27,7 @@ router.post('/start-scrapper', async (req, res) => {
 
     scrappingStatus = 'running';
 
-    const browser = await chromium.puppeteer.launch({
-        args: chromium.args,
-        defaultViewport: chromium.defaultViewport,
-        executablePath: await chromium.executablePath,
-        headless: chromium.headless,
-        ignoreHTTPSErrors: true,
-      });
+    const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
 
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
