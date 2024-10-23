@@ -67,6 +67,7 @@ router.post('/start-scrapper', async (req, res) => {
 router.get('/status', (req, res) => {
     return res.json({ status: scrappingStatus });
 });
+
 // Enviar correo de notificación
 async function sendNotificationEmail() {
     const oauth2Client = new OAuth2(
@@ -117,12 +118,7 @@ async function sendNotificationEmail() {
      });
 }
 
-app.listen(3000, () => {
-    console.log(`Example app listening on port ${3000}`)
-  })
-app.use("/.netlify/functions/app", router);
 
-module.exports.handler = async (event, context) => {
-    const result = await serverless(app)(event, context, callback);
-    return result;
-    };
+
+app.use("/.netlify/functions/app", router);
+module.exports.handler = serverless(app);
