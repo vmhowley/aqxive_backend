@@ -62,17 +62,13 @@ app.post('/start-scrapper', async (req, res) => {
 app.get('/status', (req, res) => {
     return res.json({ status: scrappingStatus });
 });
+
+
 app.get('/products/nike', async (req, res) => {
 
     const  url  = 'https://www.nike.com/launch'
     
-    // if (!url) {
-    //     return res.status(400).json({ message: 'URL es requerida.' });
-    // }
-
-    scrappingStatus = 'running';
-
-    const browser = await puppeteer.launch({ headless: true });
+    const browser = await puppeteer.launch({ headless: false });
     const page = await browser.newPage();
 
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
@@ -87,17 +83,23 @@ app.get('/products/nike', async (req, res) => {
                 const tittle = el.querySelector('h2')?.innerText
                 if (!tittle) return null
                 const subTittle = el.querySelector('h1')?.innerText
-                return {tittle, subTittle}
+                const image = el.querySelector('img').
+                getAttribute('src')
+                return {tittle, subTittle, image}
             })
             ))
-        console.log(products)
-        await browser.close()
-        return res.json(products)
+            console.log({products: products})
+            await browser.close();
+        return res.send({products})
     } catch (error) {
         console.error('Error en el scrapper:', error);
         scrappingStatus = 'error';
     } finally {
+        console.log('cerrando el Browser...')
+        scrappingStatus = 'idle';
+
         await browser.close();
+        
     }
 
 });
@@ -156,5 +158,6 @@ async function sendNotificationEmail() {
 app.listen(4000, () => {
     console.log(`Server running on port 4000`);
 });
+
 app.use("/.netlify/functions/app", router);
 module.exports.handler = serverless(app);
