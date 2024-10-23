@@ -1,13 +1,14 @@
 const serverless = require("serverless-http");
 const express = require('express');
-const puppeteer = require('puppeteer-extra');
+const puppeteer = require('puppeteer-core');
+const chromium = require('chrome-aws-lambda');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
 const { google } = require("googleapis");
 const OAuth2 = google.auth.OAuth2;
 // Inicializar Puppeteer con Stealth Plugin
-puppeteer.use(StealthPlugin());
+// puppeteer.use(StealthPlugin());
 
 const app = express();
 const router = express.Router();
@@ -27,7 +28,13 @@ router.post('/start-scrapper', async (req, res) => {
 
     scrappingStatus = 'running';
 
-    const browser = await puppeteer.launch({ headless: true });
+    const browser = await chromium.puppeteer.launch({
+        args: chromium.args,
+        defaultViewport: chromium.defaultViewport,
+        executablePath: await chromium.executablePath,
+        headless: chromium.headless,
+        ignoreHTTPSErrors: true,
+      });
     const page = await browser.newPage();
 
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
@@ -60,7 +67,6 @@ router.post('/start-scrapper', async (req, res) => {
 router.get('/status', (req, res) => {
     return res.json({ status: scrappingStatus });
 });
-
 // Enviar correo de notificación
 async function sendNotificationEmail() {
     const oauth2Client = new OAuth2(
@@ -111,6 +117,12 @@ async function sendNotificationEmail() {
      });
 }
 
-
+app.listen(3000, () => {
+    console.log(`Example app listening on port ${3000}`)
+  })
 app.use("/.netlify/functions/app", router);
-module.exports.handler = serverless(app);
+
+module.exports.handler = async (event, context) => {
+    const result = await serverless(app)(event, context, callback);
+    return result;
+    };
