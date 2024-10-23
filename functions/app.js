@@ -1,24 +1,26 @@
+require('dotenv').config()
 const serverless = require("serverless-http");
 const express = require('express');
-const puppeteer = require('puppeteer-extra');
+const puppeteer = require('puppeteer');
+const chromium = require('chrome-aws-lambda');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
 const { google } = require("googleapis");
 const OAuth2 = google.auth.OAuth2;
 // Inicializar Puppeteer con Stealth Plugin
-puppeteer.use(StealthPlugin());
+// puppeteer.use(StealthPlugin());
 
 const app = express();
 const router = express.Router();
 app.use(cors());
-router.use(express.json());
+app.use(express.json());
 
 let scrappingStatus = 'idle';  // Estado para la UI
 
 
 // Ruta para iniciar el scrapping
-router.post('/start-scrapper', async (req, res) => {
+app.post('/start-scrapper', async (req, res) => {
     const { url } = req.body;
     
     if (!url) {
@@ -57,12 +59,47 @@ router.post('/start-scrapper', async (req, res) => {
 });
 
 // Ruta para obtener el estado del scrapper
-router.get('/status', (req, res) => {
+app.get('/status', (req, res) => {
     return res.json({ status: scrappingStatus });
 });
-const port = 3000
-app.listen(port, (req, res) => {
-    console.log(`Server running on port ${port}`);
+app.get('/products/nike', async (req, res) => {
+
+    const  url  = 'https://www.nike.com/launch'
+    
+    // if (!url) {
+    //     return res.status(400).json({ message: 'URL es requerida.' });
+    // }
+
+    scrappingStatus = 'running';
+
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
+
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+
+    try {
+        await page.goto(url, { waitUntil: 'networkidle2' });
+
+        const products = await page.$$eval(
+            'figure', 
+            (results) => (
+              results.map((el) => {
+                const tittle = el.querySelector('h2')?.innerText
+                if (!tittle) return null
+                const subTittle = el.querySelector('h1')?.innerText
+                return {tittle, subTittle}
+            })
+            ))
+        console.log(products)
+        await browser.close()
+        return res.json(products)
+    } catch (error) {
+        console.error('Error en el scrapper:', error);
+        scrappingStatus = 'error';
+    } finally {
+        await browser.close();
+    }
+
 });
 
 // Enviar correo de notificación
@@ -89,10 +126,10 @@ async function sendNotificationEmail() {
         secure: true,
         auth: {
             type: "OAuth2",
-            user: USER_EMAIL_SENDER,
-            clientId: CLIENT_ID,
-            clientSecret: CLIENT_SECRET,
-            refreshToken: REFRESH_TOKEN,
+            user: process.env.USER_EMAIL_SENDER,
+            clientId: process.env.CLIENT_ID,
+            clientSecret: process.env.CLIENT_SECRET,
+            refreshToken: process.env.REFRESH_TOKEN,
             accessToken
             
 
@@ -116,5 +153,8 @@ async function sendNotificationEmail() {
 }
 
 
+app.listen(4000, () => {
+    console.log(`Server running on port 4000`);
+});
 app.use("/.netlify/functions/app", router);
 module.exports.handler = serverless(app);
